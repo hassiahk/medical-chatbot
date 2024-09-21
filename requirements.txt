@@ -1,0 +1,9 @@
+--index-url https://download.pytorch.org/whl/cpu
+torch
+flask
+transformers
+datasets
+sqlalchemy
+streamlit
+textblob
+streamlit-option-menu

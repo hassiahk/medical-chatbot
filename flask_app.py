@@ -1,9 +1,11 @@
-from flask import Flask, request, jsonify
-from transformers import pipeline
-import requests
-from sqlalchemy import create_engine, Column, Integer, String, Text
-from sqlalchemy.orm import sessionmaker, declarative_base
 import os
+
+import requests
+from flask import Flask, jsonify, request
+from sqlalchemy import Column, Integer, String, Text, create_engine
+from sqlalchemy.orm import declarative_base, sessionmaker
+from textblob import TextBlob
+from transformers import pipeline
 
 app = Flask(__name__)
 
@@ -51,7 +53,7 @@ def populate_database():
 populate_database()
 
 # Load the pre-trained text generation model
-chatbot = pipeline("text-generation", model="microsoft/phi-2")
+chatbot = pipeline("text-generation", model="hassiahk/DialoGPT-MedDialog-large")
 
 # Simulate a user profile store
 user_profiles = {}  # In production, use a persistent database
@@ -70,7 +72,10 @@ def update_user_profile(user_id, user_profile):
 def query_medical_database(query):
     """Query the medical database for relevant information."""
     session = SessionLocal()
+
     condition = query.lower()
+    condition = str(TextBlob(condition).correct())  # Corrects the spelling of the disease
+
     info = (
         session.query(MedicalInfo)
         .filter(MedicalInfo.condition.like(f"%{condition}%"))
@@ -122,15 +127,11 @@ def generate_response(user_input, user_profile):
     # 2. If not found in the database, generate a response using the NLP model
     # Concatenate the conversation history for context
     chat = user_profile["history"][-5:]
-    # if chat:
     chat.append({"role": "user", "content": user_input})
-    # else:
-    #     chat.extend([
-    #         {"role": "system", "content": "You are a doctor helping the people in need."},
-    #         {"role": "user", "content": user_input}
-    #     ])
-    print(chat)
-    bot_response = chatbot(chat, max_length=1024, num_return_sequences=1)[0]["generated_text"]
+
+    bot_response = chatbot(chat, max_length=1024, num_return_sequences=1)[0][
+        "generated_text"
+    ]
     return bot_response
 
 

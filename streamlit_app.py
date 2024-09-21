@@ -1,15 +1,20 @@
-from flask_app import generate_response, get_user_profile
 import streamlit as st
+
+from flask_app import generate_response, get_user_profile
+
+from streamlit_option_menu import option_menu
 
 st.title("Medical Chatbot")
 
 # Set a default model
 if "hf_model" not in st.session_state:
-    st.session_state["hf_model"] = "DialogGPT-MedDialog-large"
+    st.session_state["hf_model"] = "DialoGPT-MedDialog-large"
 
 # Store SLM generated responses
 if "messages" not in st.session_state.keys():
-    st.session_state.messages = [{"role": "assistant", "content": "How may I help you?"}]
+    st.session_state.messages = [
+        {"role": "assistant", "content": "How may I help you?"}
+    ]
 
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
@@ -26,7 +31,11 @@ if prompt := st.chat_input("Say something"):
             user_id = "default_user"
             user_profile = get_user_profile(user_id)
             response = generate_response(prompt, user_profile)
-            print(response)
-            st.write(response)
+
+            if type(response) == 'str':
+                st.write(response)
+            else:
+                st.write(response[-1]['content'])
+
     message = {"role": "assistant", "content": response}
     st.session_state.messages.append(message)
