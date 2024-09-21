@@ -74,7 +74,9 @@ def query_medical_database(query):
     session = SessionLocal()
 
     condition = query.lower()
-    condition = str(TextBlob(condition).correct())  # Corrects the spelling of the disease
+    condition = str(
+        TextBlob(condition).correct()
+    )  # Corrects the spelling of the disease
 
     info = (
         session.query(MedicalInfo)
@@ -88,12 +90,36 @@ def query_medical_database(query):
         return None
 
 
-def call_external_api(query):
-    """Call an external medical API to retrieve additional information."""
-    # Example: Replace with a real API endpoint and handle authentication as needed
-    # For demonstration, we will simulate an API response
-    simulated_response = {"research": f"Latest research on {query}: ..."}
-    return simulated_response
+def update_medical_database(condition, description):
+    session = SessionLocal()
+
+    info = (
+        session.query(MedicalInfo)
+        .filter(MedicalInfo.condition == condition)
+        .update({"description": description})
+    )
+
+    session.commit()
+
+    return info
+
+
+def generate_response(user_input, user_profile):
+    """Generate a response based on user input, medical database, and NLP model."""
+    # 1. Attempt to retrieve information from the medical database
+    db_response = query_medical_database(user_input)
+    if db_response:
+        return db_response
+
+    # 2. If not found in the database, generate a response using the NLP model
+    # Concatenate the conversation history for context
+    chat = user_profile["history"][-5:]
+    chat.append({"role": "user", "content": user_input})
+
+    bot_response = chatbot(chat, max_length=1024, num_return_sequences=1)[0][
+        "generated_text"
+    ]
+    return bot_response
 
 
 @app.route("/chatbot", methods=["POST"])
@@ -117,22 +143,12 @@ def chatbot_route():
     return jsonify({"response": response})
 
 
-def generate_response(user_input, user_profile):
-    """Generate a response based on user input, medical database, and NLP model."""
-    # 1. Attempt to retrieve information from the medical database
-    db_response = query_medical_database(user_input)
-    if db_response:
-        return db_response
-
-    # 2. If not found in the database, generate a response using the NLP model
-    # Concatenate the conversation history for context
-    chat = user_profile["history"][-5:]
-    chat.append({"role": "user", "content": user_input})
-
-    bot_response = chatbot(chat, max_length=1024, num_return_sequences=1)[0][
-        "generated_text"
-    ]
-    return bot_response
+def call_external_api(query):
+    """Call an external medical API to retrieve additional information."""
+    # Example: Replace with a real API endpoint and handle authentication as needed
+    # For demonstration, we will simulate an API response
+    simulated_response = {"research": f"Latest research on {query}: ..."}
+    return simulated_response
 
 
 @app.route("/external_api", methods=["POST"])
